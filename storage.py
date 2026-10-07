@@ -66,7 +66,12 @@ def create_session() -> str:
 def list_sessions(limit: int = 50) -> list[sqlite3.Row]:
     with closing(_connect()) as conn:
         return conn.execute(
-            "SELECT id, title, updated_at FROM sessions ORDER BY updated_at DESC, rowid DESC LIMIT ?",
+            # The message-id tie-break keeps the order deterministic when the clock returns the same
+            # timestamp for two updates (coarse clock resolution, e.g. on Windows).
+            "SELECT id, title, updated_at FROM sessions "
+            "ORDER BY updated_at DESC, "
+            "(SELECT MAX(m.id) FROM messages m WHERE m.session_id = sessions.id) DESC, "
+            "sessions.rowid DESC LIMIT ?",
             (limit,),
         ).fetchall()
 
