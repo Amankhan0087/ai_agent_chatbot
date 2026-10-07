@@ -49,19 +49,26 @@ st.title("⚡ Ultra-Fast Groq Chatbot")
 def get_groq_llm():
     # Model fallbacks array in case one ID is restricted on your account
     groq_models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+    errors = []
 
     for m_name in groq_models:
         try:
             llm = ChatGroq(model_name=m_name, temperature=0.7)
             llm.invoke("ping")  # ChatGroq doesn't validate the model until first call
             return llm, f"Groq ({m_name})"
-        except Exception:
-            continue
+        except Exception as e:
+            errors.append(f"{m_name}: {type(e).__name__}: {str(e)[:200]}")
 
-    return None, "Disconnected"
+    # Raising (instead of returning None) keeps st.cache_resource from caching the failure,
+    # so the app recovers on the next rerun once the key/network problem is fixed.
+    raise ConnectionError("\n".join(errors))
 
 
-model, active_provider = get_groq_llm()
+try:
+    model, active_provider = get_groq_llm()
+    connection_error = None
+except ConnectionError as e:
+    model, active_provider, connection_error = None, "Disconnected", str(e)
 
 
 # 2. Session state & callbacks
@@ -206,7 +213,12 @@ use_memory = st.session_state.get("use_memory", True)
 use_search = st.session_state.get("use_search", True)
 
 if model is None:
-    st.error("Could not connect to any Groq model. Check GROQ_API_KEY in your .env file and restart.")
+    st.error(
+        "Could not connect to any Groq model. Check that GROQ_API_KEY is set "
+        "(`.env` locally, or Secrets as `GROQ_API_KEY = \"...\"` on Streamlit Cloud), then reload."
+    )
+    with st.expander("Technical details"):
+        st.code(connection_error)
 
 if user_query := st.chat_input("Ask Groq something...", disabled=model is None):
     with st.chat_message("user"):
