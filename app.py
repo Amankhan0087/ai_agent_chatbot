@@ -46,15 +46,24 @@ st.title("⚡ Ultra-Fast Groq Chatbot")
 
 
 # 1. Initialize Groq LLM Safely
-def get_api_key() -> str | None:
-    """Read the key from the environment (.env locally) or Streamlit secrets (Streamlit Cloud)."""
-    key = os.getenv("GROQ_API_KEY")
-    if key:
-        return key
+def get_secret(name: str) -> str | None:
+    """Read a key from the environment (.env locally) or Streamlit secrets (Streamlit Cloud)."""
+    value = os.getenv(name)
+    if value:
+        return value
     try:
-        return st.secrets.get("GROQ_API_KEY")
+        return st.secrets.get(name)
     except Exception:  # no secrets file, or secrets that are not valid TOML
         return None
+
+
+def get_api_key() -> str | None:
+    return get_secret("GROQ_API_KEY")
+
+
+# tools.py reads the optional search key from the environment, so mirror it there from Streamlit secrets.
+if tavily_key := get_secret("TAVILY_API_KEY"):
+    os.environ["TAVILY_API_KEY"] = tavily_key
 
 
 @st.cache_resource(show_spinner=False)

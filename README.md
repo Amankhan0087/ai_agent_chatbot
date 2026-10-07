@@ -65,6 +65,7 @@ Open http://localhost:8501. For the CLI version run `python bot.py`.
 | Variable | Required | Description |
 | --- | --- | --- |
 | `GROQ_API_KEY` | yes | Your Groq API key |
+| `TAVILY_API_KEY` | recommended | Reliable web search ([free tier](https://app.tavily.com), 1000 searches/month). Without it the agent falls back to free scraping engines, which work locally but are usually blocked on cloud hosts |
 | `CHATBOT_DB_PATH` | no | SQLite file location (default `./chatbot.db`) |
 
 Models are listed in `get_groq_llm()` in `app.py`; the first one that responds is used.
@@ -77,7 +78,9 @@ Models are listed in `get_groq_llm()` in `app.py`; the first one that responds i
 4. Under **Advanced settings → Secrets** add:
    ```toml
    GROQ_API_KEY = "your_groq_api_key_here"
+   TAVILY_API_KEY = "your_tavily_api_key_here"
    ```
+   Values must be in quotes (TOML). `TAVILY_API_KEY` is needed for web search to work on Streamlit Cloud.
 5. Click **Deploy**.
 
 > **Important: read before sharing the link**
