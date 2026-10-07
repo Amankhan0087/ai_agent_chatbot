@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import date
 
 import streamlit as st
@@ -45,15 +46,33 @@ st.title("⚡ Ultra-Fast Groq Chatbot")
 
 
 # 1. Initialize Groq LLM Safely
+def get_api_key() -> str | None:
+    """Read the key from the environment (.env locally) or Streamlit secrets (Streamlit Cloud)."""
+    key = os.getenv("GROQ_API_KEY")
+    if key:
+        return key
+    try:
+        return st.secrets.get("GROQ_API_KEY")
+    except Exception:  # no secrets file, or secrets that are not valid TOML
+        return None
+
+
 @st.cache_resource(show_spinner=False)
 def get_groq_llm():
     # Model fallbacks array in case one ID is restricted on your account
     groq_models = ["openai/gpt-oss-20b", "openai/gpt-oss-120b"]
     errors = []
 
+    api_key = get_api_key()
+    if not api_key:
+        raise ConnectionError(
+            "GROQ_API_KEY was not found in environment variables or Streamlit secrets. "
+            'On Streamlit Cloud, set it in Settings > Secrets as: GROQ_API_KEY = "gsk_..." (with quotes).'
+        )
+
     for m_name in groq_models:
         try:
-            llm = ChatGroq(model_name=m_name, temperature=0.7)
+            llm = ChatGroq(model_name=m_name, temperature=0.7, api_key=api_key)
             llm.invoke("ping")  # ChatGroq doesn't validate the model until first call
             return llm, f"Groq ({m_name})"
         except Exception as e:
